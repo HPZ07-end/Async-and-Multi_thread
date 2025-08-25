@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 public class Book
 {
-    public string Title { get; set; }
-    public decimal Price { get; set; }
-    public int Inventory { get; set; }
+    public required string Title { get; set; }
+    public required decimal Price { get; set; }
+    public required int Inventory { get; set; }
 }
 
 public class Database
@@ -32,6 +32,26 @@ public class Database
 
         // TODO: 使用 lock 语句保证线程安全
         // 提示：在 lock 块中查找书籍并更新库存，若库存不足则输出提示
+        lock (_lock)
+        {
+            var book = _books.Find(b => b.Title == title);
+            if (book != null)
+            {
+                if (book.Inventory >= quantity)
+                {
+                    book.Inventory -= quantity;
+                    Console.WriteLine($"成功购买：{title} x{quantity}，剩余库存：{book.Inventory}");
+                }
+                else
+                {
+                    Console.WriteLine($"库存不足：{title} 仅剩 {book.Inventory} 本，需要 {quantity} 本");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"找不到书籍：{title}");
+            }
+        }
     }
 }
 
@@ -42,6 +62,7 @@ public class BookStore
     // TODO: 实现异步购书方法CheckoutAsync，调用 UpdateInventoryAsync
     public async Task CheckoutAsync(string bookTitle, int quantity)
     {
+        await _db.UpdateInventoryAsync(bookTitle, quantity);
     }
 
     public async Task SimulateMultipleUsers()
@@ -59,9 +80,14 @@ public class BookStore
         // 提示：创建多个 Task 调用 CheckoutAsync，并传入不同书名和数量
         var tasks = new List<Task>
         {
-            
+            CheckoutAsync("C#入门", 2),
+            CheckoutAsync("C#入门", 3),
+            CheckoutAsync("异步编程", 1),
+            CheckoutAsync("异步编程", 2),
+            CheckoutAsync("异步编程", 3)
         };
 
+        await Task.WhenAll(tasks);
 
         Console.WriteLine("\n购买后库存：");
         books = await _db.GetBooksAsync();
@@ -72,7 +98,7 @@ public class BookStore
     }
 }
 
-public class Program
+public partial class Program
 {
     public static async Task Main()
     {
